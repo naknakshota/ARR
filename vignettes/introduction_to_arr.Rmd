@@ -1,0 +1,418 @@
+---
+title: "Analysis of Recurrence Relations (ARR)"
+author: "Shota Nakamura and Chris Russo"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+# Introduction to Recurrence Relations
+
+This package tackles teaching optimization of functions to an aspiring data scientist from a mathematical and more computer sciency perspective. Our teaching tool takes advantage of R's lazy programming and Non-standard evaluation (NSE), and shows examples by applying concepts to recurrence relations.
+
+We will start with a classic example of an recursive function to familiarize ourselves or recall the basics.
+
+The Fibonacci sequence is a set of numbers that starts with a one or a zero, followed by a one, and proceeds based on the rule that each number (called a Fibonacci number) is equal to the sum of the preceding two numbers.
+
+Given the above definition, the following are true.
+
+fib(0) = 1
+
+fib(1) = 1
+
+fib(2) = fib(1) + fib(0) = 1 + 1
+
+fib(3) = fib(2) + fib(1) = fib(1) + fib(0) + fib(1) = 3
+
+fib(4) = fib(3) + fib(2) = fib(2) + fib(1) + fib(1) + fib(0) = fib(1) + fib(0) + fib(1) + fib(1) + fib(0) = 5
+
+.
+
+.
+
+.
+
+fib(n-1) = fib(n-2) + fib(n-3)
+
+fib(n) = fib(n-1) + fib(n-2)
+
+
+Now if we express this as code in R, below is the output.
+
+```{r}
+fib <- function(n) {
+  if(n <= 1) {
+    return(n)
+  } else {
+    return(fib(n-1) + fib(n-2))
+  }
+}
+```
+Let's do a static analysis of the code.
+
+The first if-clause says if the input n is less than or equal to 1, it returns the number. If we look at the long evaluations of fibonacci we did before the code, we see that fib(0) and fib(1) always returned 1.
+
+Now the interesting part here is the else-clause. The else clause is evaluated if the fibonacci number is greater than but NOT equal to 1. If we look inside the return statement thought, we see that it calls two more functions, fibonacci(n-1) and fibonacci(n-2). We know fibonacci is our own original function, so it means that the function is calling itself on a different input!
+
+Recalling our evaluation example above, we know fib(3) first evaluated to:
+```{r}
+fib(2) + fib(1)
+```
+
+However, It follows that fib(2) would call the else clause again, therefore evaluating to:
+```{r}
+fib(1) + fib(0) + fib(1)
+```
+where the final output is 2.
+
+This all happens under the hood as we show by performing a dynamic analysis of the code.
+
+```{r}
+fib(3)
+```
+
+Now what happens if we want to know what the computation steps look like if we were let's trying to figure out the 30th fibonacci number? Clearly this will take some time. How about the 50th fibonacci number? Chances are, your RStudio will crash before it can compute it. To understand what is happening under the hood, you can use our package for analysis.
+
+
+
+# General Package Information
+
+The ARR package allows users to visualize how many subproblems are called when they call a recursive function. The functions below allow users to visualize how important it is to *optimize* functions using various algorithm optimization methods.
+
+*mult* Implementation of multiplication using recursive addition.
+
+*fib* calculates the nth fibonacci number.
+
+*createList* creates a list of the size of the given parameter. This number should be greater than or equal to n, where n is the nth fibonacci number you are trying to calculate.
+
+*memoized_fib* calculates the nth fibonacci number using memoization (dynamic programming).
+
+*analyzeTime* compares the time it takes to run two functions. The intended application is to show the difference between a given function and a more efficient version of it. Further, it is useful when attempting to improve code, in order to test if the changes are having the desired effect.
+  
+*recursiveCalls* is also designed to check written code. Specifcally, it will run a recursive function, and in addition to returning the result, will print out every recursive call. This serves two primary purposes. First, it allows the user to more easily check if the function is working as intended. This is difficult with current R tools, as they only do not show the values being called, simply the call itself. Second, it allows the user to see how many repeated calls occur in the evaluation. This second element is informative for streamlining recursive function, as demonstrated by the fibonacci example. Note: this function is meant to assist in building functions, but if applied to a recursive function with an inordinate amount of calls, the printed results will be difficult to interpret. Try to use this function for examples with less recursive calls to see if the pattern is what is expected.
+
+*saveCalls* is designed to save the output of recursiveCalls. Since we need to store every recursive call in every recursive sub branch, we require the user to use this function in conjunction with the baseR function, "capture.output". These two functions need to be run separately one after the other because of how R handles the recursive call stack within its environment.
+
+*recDist* is designed to take the output of saveCalls and create a dataframe aggregating each recursive call into a frequency table. This allows the user to visualize how many times each function was called.
+
+*plotDist* takes the output of recDist and plots how the data was distributed throughout the recursive subproblems.
+
+*plotDensity* takes the output of recDist and plots a density plot of the distribution of the recursive subproblems.
+
+A good example of how these functions can be effectively used is in calculating the nth fibonacci number. Two implementations are provided in this package, one of which makes use of memoization to increase efficiency.
+
+
+# Functions
+
+# Multiplication through Recursive Addition
+
+*mult* multiplies the first and second parameter and returns output. Takes following parameters:
+
+x: first number to be multiplied
+
+y: second number to be multiplied
+
+example: mult(5,6) = 30
+```{r}
+mult <- function(x, y){
+  if(y == 0){
+    0
+  } else{
+    x + mult(x, y - 1)
+  }
+}
+
+# example
+mult(6,5)
+```
+
+
+# Basic Fibonacci
+
+*fib* returns the nth fibonacci number without any code optimization. Takes the following parameter:
+
+n: nth fibonacci number to be calculated. 1-indexed.
+
+Note: *Do not attempt to calculate anything above the 30th fibonacci number* (Your computer won't be able to handle the compuation)
+
+example: fib(10) = 55
+```{r}
+fib <- function(n){
+  if(n <= 1) {
+    return(n)
+  } else {
+    return(fib(n-1) + fib(n-2))
+  }
+}
+
+# example
+fib(10)
+```
+
+
+# Memoized Fibonacci
+
+*createList* prepares a list for memoized fibonacci. Takes the following parameter:
+
+n: nth fibonacci number to be calculated. 1-indexed.
+
+example: createList(10)
+
+*fib_memoized* more efficiently returns the nth fibonacci number. Takes the following parameters:
+
+n: nth fibonacci number to be calculated. 1-indexed.
+
+newlist: createList(n)
+
+```{r}
+createList <- function(n){
+  newlist <- list()
+  for(i in 1:n){
+    newlist <- c(newlist,-1)
+  }
+  newlist[[1]] <- 1
+  newlist[[2]] <- 1
+  return(newlist)
+}
+
+# example
+createList(10)
+```
+
+```{r}
+fib_memoized <- function(n,newlist){
+  if(n == 1){
+    return(newlist[[1]])
+  } else if(n == 2){
+    return(newlist[[2]])
+  } else{
+    if(newlist[[n]] != -1){
+      return(list(newlist[[n]],newlist))
+    } else{
+      newlist[[n-2]] = fib_memoized(n-2,newlist)[[1]]
+      newlist[[n-1]] = fib_memoized(n-1,newlist)[[1]]
+      newlist[[n]] = fib_memoized(n-2,newlist)[[1]] + fib_memoized(n-1,newlist)[[1]]
+    }
+  }
+  return(list(newlist[[n]],newlist))
+}
+
+# example
+fib_memoized(10,createList(10))[[1]]
+```
+
+# Time Analysis
+
+*analyzeTime* is a code refactoring tool that will take two functions, and graph a time analysis of how long it took to run the functions on the user's machine. It allows a quick look at multiple ways of writing similar functions in other ways. 
+
+Takes the following parameters:
+
+title: Title of the graph.
+
+fill: A vector of length two of colors for the bargraphs.
+
+func1: First function to be analyzed.
+
+func2: Second function to be analyzed.
+
+```{r fig.width=6, include=FALSE}
+analyzeTime <- function(title, fill = c("cornflowerblue","#009E73"),func1, func2){
+  timer1 <- function(fib1){
+  system.time({
+      fib1
+    })
+  }
+  timedOne <- timer1(func1)[[1]]
+  timedTwo <- timer1(func2)[[1]]
+  timeType <- c("functionOne","functionTwo")
+  analysisOne <- as.data.frame(timeType)
+  analysisTwo <- as.data.frame(c(timedOne,timedTwo))
+  timeAnalysis <- as.data.frame(cbind(analysisOne,analysisTwo))
+  colnames(timeAnalysis) <- c("Function","Time")
+  print(timeAnalysis)
+  require(ggplot2)
+  title = paste("User Time analysis of",title)
+  ggplot(data=timeAnalysis, aes(x=Function, y=Time)) +
+    geom_bar(stat="identity", fill = fill) + ggtitle(title)
+}
+```
+
+```{r}
+# example
+analyzeTime(title="Fibonacci vs. Memoized Fibonacci", func1 = fib(30), func2 = fib_memoized(30,createList(30)))
+```
+
+# Check All Recursive Calls
+
+*recursiveCalls* takes a recursive function, with its parameters, and returns the result and prints out every recursive call. Takes the following parameters:
+
+recfunc: the recursive function to be called without the parenthesis or the arguments. Must have at least one recursive function call.
+
+...: the parameters of the function to be called.
+
+```{r include=FALSE}
+recursiveCalls <- function(recFunc,...){
+  # create character vector
+  func_vec <- deparse(recFunc)
+  # replace function name
+  library(stringr)
+  funcName <- deparse(substitute(recFunc))
+  func_vec <- str_replace_all(func_vec, funcName, "test")
+  
+  func_vec_new <- character(length(func_vec)+1)
+  func_vec_new[1] <- func_vec[1]
+  func_vec_new[2] <- func_vec[2]
+  # insert
+  call <- func_vec[1]
+  call2 <- substr(call,11,nchar(call)-2)
+  
+  funcPar <- paste(funcName, '(',sep="")
+  func_vec_new[3] <- paste("print(paste(funcPar, ", "paste(", call2, ",sep=','", ")", ", ')', ", "sep = ''))", sep = "")
+  
+  for(i in 3:length(func_vec)){
+    func_vec_new[i+1] <- func_vec[i]
+  }
+  test <- eval(parse(text = func_vec_new))
+  test(...)
+}
+
+```
+
+Examples:
+```{r}
+# Multiplication
+mult(5,3)
+recursiveCalls(mult,3,12)
+
+# Fibonacci
+fib(5)
+recursiveCalls(fib,5)
+
+# Memoized Fibonacci
+newlist1 <- createList(5)
+fib_memoized(5,newlist1)
+recursiveCalls(fib_memoized,5,newlist1)
+```
+
+# Save all Recursive Calls
+
+*saveCalls* takes all recursive subproblems found in recursive calls and returns character vector containing all recursive subproblems. Takes the following parameters:
+
+filename: the file you saved in capture.output
+
+```{r include=FALSE}
+saveCalls <- function(filename){
+  output <- read.csv(filename, header = F, stringsAsFactors = F)
+  recurse <- output[-(length(output$V1)),]
+  recurse <- substr(recurse, 5, length(recurse))
+  return(recurse)
+}
+```
+
+```{r}
+# example:
+capture.output(recursiveCalls(fib,10), file = "output.txt")
+
+fibResult <- saveCalls("output.txt")
+fibResult
+```
+
+# Find Distribution of subproblems.
+
+*recDist* takes the output of saveCalls and creates a dataframe aggregating each recursive call into a frequency table. This allows the user to visualize how many times each recursive function was called. Returns a dataframe containing the frequencies and the subproblems. Takes the following parameters:
+
+result: resulting character vector from saveCalls
+
+```{r include=FALSE}
+recDist <- function(result){
+  count <- as.character(table(result))
+  count <- data.frame(unclass(table(result)))
+  colnames(count) <- "freq"
+  count$subProblems <- rownames(count)
+  count <- count[,c(2,1)]
+  rownames(count) <- NULL
+  count <- count[order(count$freq),]
+  return(count)
+}
+```
+
+```{r}
+# example:
+capture.output(recursiveCalls(fib,10), file = "output.txt")
+fibResult <- saveCalls("output.txt")
+res <- recDist(fibResult)
+res
+```
+
+
+# Plot Distribution of Recurrence Relations
+
+*plotDist* takes the output of recDist and plots how the data was distributed throughout the recursive subproblems. Package requires ggplot2. Takes the following parameters:
+
+data: result of recDist
+
+xlabel: x label title of graph (defaults to "x label")
+
+ylabel: y label title of graph (defaults to "y label")
+
+title: title of graph (defaults to "Title")
+
+color: color of points (defaults to "darkblue")
+
+```{r include=FALSE}
+plotDist <- function(data,xlabel="x label",ylabel="y label", title="Title",color="darkblue"){
+  require(ggplot2)
+  ggplot(data = data,
+         mapping = aes(x = data[,1], y = data[,2])) +
+    geom_point() +
+    xlab(xlabel) +
+    ylab(ylabel) +
+    ggtitle(title) +
+    geom_point(color=color)
+}
+```
+
+```{r}
+# example
+capture.output(recursiveCalls(fib,10), file = "output.txt")
+fibResult <- saveCalls("output.txt")
+res <- recDist(fibResult)
+plotDist(res, title="Analysis of Fibonacci",xlabel="subproblems",ylabel="frequency")
+```
+
+# Plot Density
+
+*plotDensity* takes the output of recDist and plots a density plot of the distribution of the recursive subproblems. Takes the following parameters:
+
+data: output from recDist
+
+title: title of graph (defaults to "Title")
+
+color: color of area of density plot (defaults to "cornflowerblue")
+
+border: color of outline of density plot (defaults to "red")
+
+```{r include=FALSE}
+plotDensity <- function(data,title="Title",color="cornflowerblue",border="red"){
+  d <- density(data[,2])
+  plot(d, main=title)
+  polygon(d, col=color, border=border)
+}
+```
+
+```{r}
+# example
+capture.output(recursiveCalls(fib,10), file = "output.txt")
+fibResult <- saveCalls("output.txt")
+plotDensity(recDist(fibResult),title="Fibonacci Density Plot", color="cornflowerblue",border="black")
+```
+

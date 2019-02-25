@@ -1,0 +1,14 @@
+Package: ARR
+Type: Package
+Title: Analysis of Recurrence Relations
+Version: 1.0
+Date: 2018-12-12
+Authors@R: c(person("Shota", "Nakamura", role = c("aut", "cre"), email = "snak1219@gmail.com"), person("Chris", "Russo", role = "aut"))
+Description: This package is an open source teaching resource for teaching the concept of recurrence relations to Data Scientists around the world.
+LazyData: true
+License: GPL-3
+Depends: R (>= 2.10)
+BugReports: https://github.com/cfrusso/ARR/issues
+RoxygenNote: 6.1.0
+Suggests: knitr, rmarkdown, testthat
+VignetteBuilder: knitr
